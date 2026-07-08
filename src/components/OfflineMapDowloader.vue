@@ -1,8 +1,14 @@
 <template>
   <div class="offline-amap-container">
     <div class="search-container">
+      <select v-model="selectedSourceId" @change="onSourceChange" class="source-select" title="选择地图瓦片源">
+        <option value="">自定义/选择地图源</option>
+        <optgroup v-for="(list, group) in groupedSources" :key="group" :label="group">
+          <option v-for="s in list" :key="s.id" :value="s.id">{{ s.name }}</option>
+        </optgroup>
+      </select>
       <input placeholder="请输入XYZ瓦片地址，例如：https://webst01.is.autonavi.com/appmaptile?style=6&x={x}&y={y}&z={z}"
-        type="input" v-model="url" style="width: 688px;" />
+        type="input" v-model="url" style="width: 520px;" />
       <button @click="initMap">加载瓦片</button>
       <button @click="drawRect">划范围</button>
       <button @click="selectGlobal">全球范围</button>
@@ -82,6 +88,39 @@ const lat = ref(39.90923);
 const lng = ref(116.397428);
 const zoom = ref(12);
 
+const mapSources = ref([]);
+const selectedSourceId = ref('');
+const currentSource = ref(null);
+
+const groupedSources = computed(() => {
+  const groups = {};
+  mapSources.value.forEach((s) => {
+    (groups[s.group] || (groups[s.group] = [])).push(s);
+  });
+  return groups;
+});
+
+async function loadMapSources() {
+  try {
+    const res = await fetch(`${import.meta.env.BASE_URL}map_sources.json`);
+    mapSources.value = await res.json();
+  } catch (err) {
+    ElMessage.error('加载地图源列表失败');
+  }
+}
+
+function onSourceChange() {
+  const src = mapSources.value.find((s) => s.id === selectedSourceId.value);
+  currentSource.value = src || null;
+  if (!src) return;
+  if (src.requiresKey && !src.apiKey) {
+    ElMessage.warning(`「${src.name}」需要 API Key，可能无法正常加载`);
+  }
+  url.value = src.url;
+  rule.value = `tiles/[z]/[y]/[x].${src.format || 'png'}`;
+  initMap();
+}
+
 const tableData = computed(() => {
   if (rect) {
     let list = [];
@@ -119,6 +158,7 @@ const rectLngLat = computed(() => {
 });
 
 onMounted(() => {
+  loadMapSources();
   initMap();
 });
 
@@ -136,7 +176,7 @@ function lat2tile(lat, zoom) {
 
 function downloadTile(x, y, z) {
   return new Promise((resolve, reject) => {
-    fetch(url.value.replace('{x}', x).replace('{y}', y).replace('{z}', z))
+    fetch(resolveTileUrl(x, y, z))
       .then((res) => res.blob())
       .then((blob) => {
         resolve(blob);
@@ -144,6 +184,41 @@ function downloadTile(x, y, z) {
       .catch((err) => {
         reject(err);
       });
+  });
+}
+
+function tile2quadkey(x, y, z) {
+  let quadKey = '';
+  for (let i = z; i > 0; i--) {
+    let digit = 0;
+    const mask = 1 << (i - 1);
+    if ((x & mask) !== 0) digit += 1;
+    if ((y & mask) !== 0) digit += 2;
+    quadKey += digit;
+  }
+  return quadKey;
+}
+
+function resolveTileUrl(x, y, z) {
+  const src = currentSource.value;
+  let u = url.value;
+  if (src && src.subdomains && src.subdomains.length) {
+    const s = src.subdomains[Math.abs(x + y) % src.subdomains.length];
+    u = u.replace(/\{s\}/g, s);
+  }
+  return u
+    .replace(/\{quadkey\}/g, tile2quadkey(x, y, z))
+    .replace(/\{Math\.floor\(x\/(\d+)\)\}/g, (_, n) => String(Math.floor(x / Number(n))))
+    .replace(/\{Math\.floor\(y\/(\d+)\)\}/g, (_, n) => String(Math.floor(y / Number(n))))
+    .replace(/\{-y\}/g, String(Math.pow(2, z) - 1 - y))
+    .replace(/\{z\}/g, z)
+    .replace(/\{x\}/g, x)
+    .replace(/\{y\}/g, y);
+}
+
+function buildTileSource() {
+  return new XYZ({
+    tileUrlFunction: ([z, x, y]) => resolveTileUrl(x, y, z),
   });
 }
 
@@ -155,9 +230,7 @@ function initMap() {
     target: 'canvas',
     layers: [
       new TileLayer({
-        source: new XYZ({
-          url: url.value,
-        }),
+        source: buildTileSource(),
         projection: 'EPSG:3857'
       }),
     ],
@@ -321,6 +394,7 @@ function download() {
 async function downloadTiles(list) {
   isLoading.value = true;
   const total = list.length;
+  const ext = (currentSource.value && currentSource.value.format) || 'png';
   let count = 0;
   let zip = new JSZip();
   for (let i = 0; i < list.length; i += 6) {
@@ -328,14 +402,14 @@ async function downloadTiles(list) {
     if (i + 6 > list.length) {
       promises = list.slice(i, list.length).map(async (item) => {
         const blob = await downloadTile(item.x, item.y, item.z)
-        zip.file(`${item.z}/${item.y}/${item.x}.png`, blob);
+        zip.file(`${item.z}/${item.y}/${item.x}.${ext}`, blob);
         count++;
         process.value = ((count / total) * 100).toFixed(2);
       });
     } else {
       promises = list.slice(i, i + 6).map(async (item) => {
         const blob = await downloadTile(item.x, item.y, item.z)
-        zip.file(`${item.z}/${item.y}/${item.x}.png`, blob);
+        zip.file(`${item.z}/${item.y}/${item.x}.${ext}`, blob);
         count++;
         process.value = ((count / total) * 100).toFixed(2);
       });
@@ -455,6 +529,12 @@ async function downloadTiles(list) {
       &::-moz-placeholder {
         color: gray;
       }
+    }
+
+    .source-select {
+      width: 180px;
+      margin-right: 4px;
+      cursor: pointer;
     }
   }
 
