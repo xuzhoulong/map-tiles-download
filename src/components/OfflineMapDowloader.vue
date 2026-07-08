@@ -5,6 +5,7 @@
         type="input" v-model="url" style="width: 688px;" />
       <button @click="initMap">加载瓦片</button>
       <button @click="drawRect">划范围</button>
+      <button @click="selectGlobal">全球范围</button>
 
       <button @click="isShow = true" v-if="rect">下载</button>
     </div>
@@ -230,6 +231,25 @@ function drawRect() {
       ]]),
     }));
   });
+}
+
+function selectGlobal() {
+  clearRect();
+  map.addLayer(graphicsLayer);
+  map.addLayer(rectLayer);
+  const min = fromLonLat([-180, -85.05112878]);
+  const max = fromLonLat([180, 85.05112878]);
+  rect.value = [min[0], min[1], max[0], max[1]];
+  const geometry = new Polygon([[
+    [rect.value[0], rect.value[1]],
+    [rect.value[0], rect.value[3]],
+    [rect.value[2], rect.value[3]],
+    [rect.value[2], rect.value[1]],
+    [rect.value[0], rect.value[1]]
+  ]]);
+  graphicsLayer.getSource().addFeature(new Feature({ geometry: geometry.clone() }));
+  rectLayer.getSource().addFeature(new Feature({ geometry }));
+  map.getView().fit(rect.value);
 }
 
 function clearRect() {
