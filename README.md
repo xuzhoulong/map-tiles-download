@@ -1,6 +1,12 @@
+# map-tiles-download
+
+地图瓦片下载
+
 ### 技术选型
 
 Vue3 + element-plus + jszip + OpenLayers
+
+此项目在UI部分基于项目 [https://github.com/zhnny/online-map-download/tree/master](https://github.com/zhnny/online-map-download/tree/master)：的UI进行修改
 
 此项目在UI部分基于项目：[xiaolidan00/offline-map-download: 纯前端离线瓦片地图下载 (github.com)](https://github.com/xiaolidan00/offline-map-download)的UI进行修改
 
@@ -36,11 +42,19 @@ Vue3 + element-plus + jszip + OpenLayers
 
 ```javascript
 function lon2tile(lon, zoom) {
-  return (Math.floor((lon + 180) / 360 * Math.pow(2, zoom)));
+  return Math.floor(((lon + 180) / 360) * Math.pow(2, zoom));
 }
 
 function lat2tile(lat, zoom) {
-  return (Math.floor((1 - Math.log(Math.tan(lat * Math.PI / 180) + 1 / Math.cos(lat * Math.PI / 180)) / Math.PI) / 2 * Math.pow(2, zoom)));
+  return Math.floor(
+    ((1 -
+      Math.log(
+        Math.tan((lat * Math.PI) / 180) + 1 / Math.cos((lat * Math.PI) / 180),
+      ) /
+        Math.PI) /
+      2) *
+      Math.pow(2, zoom),
+  );
 }
 
 function download() {
@@ -74,14 +88,14 @@ async function downloadTiles(list) {
     let promises = [];
     if (i + 6 > list.length) {
       promises = list.slice(i, list.length).map(async (item) => {
-        const blob = await downloadTile(item.x, item.y, item.z)
+        const blob = await downloadTile(item.x, item.y, item.z);
         zip.file(`${item.z}/${item.y}/${item.x}.png`, blob);
         count++;
         process.value = ((count / total) * 100).toFixed(2);
       });
     } else {
       promises = list.slice(i, i + 6).map(async (item) => {
-        const blob = await downloadTile(item.x, item.y, item.z)
+        const blob = await downloadTile(item.x, item.y, item.z);
         zip.file(`${item.z}/${item.y}/${item.x}.png`, blob);
         count++;
         process.value = ((count / total) * 100).toFixed(2);
@@ -93,7 +107,7 @@ async function downloadTiles(list) {
 
 function downloadTile(x, y, z) {
   return new Promise((resolve, reject) => {
-    fetch(url.value.replace('{x}', x).replace('{y}', y).replace('{z}', z))
+    fetch(url.value.replace("{x}", x).replace("{y}", y).replace("{z}", z))
       .then((res) => res.blob())
       .then((blob) => {
         resolve(blob);
@@ -104,8 +118,6 @@ function downloadTile(x, y, z) {
   });
 }
 ```
-
-
 
 ### 网站部署
 
