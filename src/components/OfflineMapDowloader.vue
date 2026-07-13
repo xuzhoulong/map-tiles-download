@@ -108,7 +108,7 @@ const isShow = ref(false);
 const isLoading = ref(false);
 const process = ref(0);
 const rect = ref(null);
-const rule = ref("tiles/[z]/[y]/[x].png");
+const rule = ref("tiles/[z]/[x]/[y].png");
 const zoomMap = ref({});
 const lat = ref(39.90923);
 const lng = ref(116.397428);
@@ -143,7 +143,7 @@ function onSourceChange() {
     ElMessage.warning(`「${src.name}」需要 API Key，可能无法正常加载`);
   }
   url.value = src.url;
-  rule.value = `tiles/[z]/[y]/[x].${src.format || "png"}`;
+  rule.value = `tiles/[z]/[x]/[y].${src.format || "png"}`;
   initMap();
 }
 
@@ -467,14 +467,14 @@ async function downloadTiles(list) {
     if (i + 6 > list.length) {
       promises = list.slice(i, list.length).map(async (item) => {
         const blob = await downloadTile(item.x, item.y, item.z);
-        zip.file(`${item.z}/${item.y}/${item.x}.${ext}`, blob);
+        zip.file(`${item.z}/${item.x}/${item.y}.${ext}`, blob);
         count++;
         process.value = ((count / total) * 100).toFixed(2);
       });
     } else {
       promises = list.slice(i, i + 6).map(async (item) => {
         const blob = await downloadTile(item.x, item.y, item.z);
-        zip.file(`${item.z}/${item.y}/${item.x}.${ext}`, blob);
+        zip.file(`${item.z}/${item.x}/${item.y}.${ext}`, blob);
         count++;
         process.value = ((count / total) * 100).toFixed(2);
       });
