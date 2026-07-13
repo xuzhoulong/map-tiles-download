@@ -2,6 +2,10 @@
 
 地图瓦片下载
 
+# node -v
+
+v24.16.0
+
 ### 技术选型
 
 Vue3 + element-plus + jszip + OpenLayers
