@@ -17,9 +17,9 @@ on:
 
 # ── 全局权限配置（GITHUB_TOKEN） ──────────────
 permissions:
-  contents: read      # 检出代码
-  pages: write        # 部署 Pages
-  id-token: write     # OIDC 身份验证，用于 Pages 部署鉴权
+  contents: read # 检出代码
+  pages: write # 部署 Pages
+  id-token: write # OIDC 身份验证，用于 Pages 部署鉴权
 
 # ── 并发控制：同一分组只保留最新运行，自动取消旧运行 ──
 concurrency:
@@ -48,12 +48,12 @@ jobs:
       - name: 🟢 设置 Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '24.16.0'
-          cache: 'pnpm'   # 自动缓存 pnpm 依赖，大幅加速后续构建
+          node-version: "24.16.0"
+          cache: "pnpm" # 自动缓存 pnpm 依赖，大幅加速后续构建
 
       # 4. 安装项目依赖
       - name: ⬇️ 安装依赖
-        run: pnpm install --frozen-lockfile
+        run: pnpm install
 
       # 5. 执行构建（产出 dist 目录）
       - name: 🏗️ 构建项目
@@ -63,7 +63,7 @@ jobs:
       - name: 📤 上传构建产物
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ./dist   # Vite 默认输出目录
+          path: ./dist # Vite 默认输出目录
 
   # ═══════════════════════════════════════════════
   #  Job 2: 部署
