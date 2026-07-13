@@ -1,0 +1,7 @@
+# pnpm 工作区配置（单仓库项目同样适用）
+# 用于替代 package.json 中已废弃的 "pnpm" 字段
+
+# 允许这些依赖执行构建脚本（原生模块等）
+onlyBuiltDependencies:
+  - '@parcel/watcher'
+  - esbuild
